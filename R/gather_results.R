@@ -97,18 +97,28 @@ gather_results <- function(parsed){
           do.call(plyr::rbind.fill, XML::xmlApply(n, function(n0){
 
             subtitle <- XML::xmlValue(n0[["title"]])
-            tmpRes <- XML::xmlApply(n0[["category_list"]][["category"]][["measurement_list"]], function(x){
+            
+            # Patched (Karma): to address xmlapply null error
+            test <- n0[["category_list"]][["category"]][["measurement_list"]]
+            tmpRes <- list()
+            
+            if (!is.null((test))) {
+              tmpRes <- XML::xmlApply(n0[["category_list"]][["category"]][["measurement_list"]], function(x){
+                as.data.frame(t(XML::xmlAttrs(x)), stringsAsFactors = FALSE)
+              })
+            
+              ResAdd <- do.call(plyr::rbind.fill, tmpRes)
 
-              as.data.frame(t(XML::xmlAttrs(x)), stringsAsFactors = FALSE)
-
-            })
-            ResAdd <- do.call(plyr::rbind.fill, tmpRes)
-            data.frame(
-              cbind(
-                subtitle = subtitle,
-                ResAdd,
-                stringsAsFactors = FALSE),
-              row.names = NULL, stringsAsFactors = FALSE)
+            } else{
+              # Patched (Karma): to address error
+              ResAdd <- list()
+            }
+          data.frame(
+                cbind(
+                  subtitle = subtitle,
+                  ResAdd,
+                  stringsAsFactors = FALSE),
+                row.names = NULL, stringsAsFactors = FALSE)
           }))
 
         } else {
@@ -116,6 +126,7 @@ gather_results <- function(parsed){
           XML::xmlValue(n)
 
         }
+
       })
 
       if (any(names(lank) == "class_list", na.rm = T)) {
@@ -129,8 +140,11 @@ gather_results <- function(parsed){
 
     }))
 
+    # Patched (Karma): to address record mismatch error
+    x <- gp_look[baseline_table$group_id]
+    if (length(x) >0){
     baseline_table$arm <- gp_look[baseline_table$group_id]
-
+}
   }
 
   baseline_table$nct_id <- this_nct_id
